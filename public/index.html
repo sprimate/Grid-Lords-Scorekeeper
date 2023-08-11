@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Room</title>
+    <style>
+        #inRoom {
+            display: none;
+        }
+        #notInRoom {
+            display: block;
+        }
+
+        /* Basic Reset and General Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #0A2540;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            font-size: 16px;
+        }
+
+        /* Container Styles */
+        #inRoom, #notInRoom {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+            background: #122A4A;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        h2, h3 {
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        hr {
+            border-top: 1px solid #2D5B8F;
+            margin: 20px 0;
+        }
+
+        /* Input and Button Styles */
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2D5B8F;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4A85CF;
+        }
+
+        /* Player Data and Actions */
+        #playerData {
+            margin-top: 20px;
+        }
+
+        #playerData div {
+            margin-bottom: 20px;
+        }
+
+        #playerData button {
+            margin-right: 10px;
+        }
+
+        /* Ensure all text elements have a margin for separation */
+        p {
+            margin: 10px 0;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!-- For users not in a room -->
+    <div id="notInRoom">
+        <button onclick="createRoom()">Create Room</button>
+        <input type="text" id="roomKey" placeholder="Enter room key">
+        <button onclick="joinRoom()">Join Room</button>
+    </div>
+
+    <!-- For users in a room -->
+    <div id="inRoom">
+        <h2>Room ID: <span id="roomId"></span></h2>
+        <button onclick="leaveRoom()">Leave Room</button>
+        <hr>
+        <input type="text" id="playerName" placeholder="Player Name">
+        <button onclick="createPlayer()">Add Player</button>
+        <hr>
+        <div id="playerData"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let currentRoomKey = null;
+
+socket.on('room-joined', (obj) => {
+    currentRoomKey = obj.roomKey;
+    UpdateScore(obj.data.players);
+    console.log("Obj: ", obj);
+    //document.getElementById('score').innerText = data.score;
+    document.getElementById('roomId').innerText = currentRoomKey;
+    switchView(true);
+});
+
+socket.on('players-modified', data => {
+    console.log("Player Modified! ", data);
+    document.getElementById('playerName').value = "";
+    UpdateScore(data);
+});
+
+function createPlayer()
+{
+    var name = document.getElementById("playerName").value;
+    if (!name)
+    {
+        return;
+    }
+
+    var elem = document.getElementById(name);
+    if (elem == null)
+    {
+        socket.emit("create-player", {roomKey: currentRoomKey, name: name});
+    }
+    else
+    {
+        alert("Player already exists with the name: " + name);
+    }
+}
+
+function UpdateScore(data)
+{
+    var playerDataDiv = document.getElementById('playerData');
+    playerDataDiv.innerHTML = '';
+
+    for(const playerId in data)
+    {
+        var playerData = data[playerId];
+        console.log("Player " , playerId, data[playerId]);
+        playerDataDiv.innerHTML += `
+            <div id="${playerId}">
+                <h3>${playerId}</h3>
+                <button onclick="removePlayer('${playerId}')">Remove Player</button>
+        `
+        for(var scoreType in playerData)
+        {
+            playerDataDiv.innerHTML += `<p>${scoreType}: <span id="${playerId}-${scoreType}">${playerData[scoreType]}</span></p>`;
+            playerDataDiv.innerHTML += `<button onclick="updateData(1, '${playerId}', '${scoreType}')">Increment</button>`;
+            playerDataDiv.innerHTML += `<button onclick="updateData(-1, '${playerId}', '${scoreType}')">Decrement</button>`;
+            //console.log("Score Type ", scoreType, " for player ", playerData[scoreType]);
+        }
+        playerDataDiv.innerHTML += `
+            </div>
+            <hr>
+        `;
+    }
+}
+
+function removePlayer(playerToRemove)
+{
+    if (confirm("Are you sure you want to remove player " + playerToRemove + "?"))
+    {
+        socket.emit('remove-player', { roomKey: currentRoomKey, playerName: playerToRemove });
+    }
+}
+
+socket.on('room-not-found', () => {
+    alert('Room not found!');
+});
+
+socket.on('data-updated', (data) => {
+    document.getElementById(data.playerId + "-" + data.elementName).innerText = data.value;
+});
+
+socket.on('room-disbanded', () => {
+    alert('Room has been disbanded.');
+    leaveRoom();
+});
+
+function createRoom() {
+    socket.emit('create-room');
+}
+
+function joinRoom() {
+    const roomKey = document.getElementById('roomKey').value;
+    if (roomKey) {
+        socket.emit('join-room', roomKey);
+    }
+}
+
+function updateData(value, playerId, elementName) {
+    if (currentRoomKey) {
+        socket.emit('update-data', { roomKey: currentRoomKey, value, playerId, elementName });
+    }
+}
+
+function leaveRoom() {
+    currentRoomKey = null;
+    document.getElementById('playerData').innerHTML = '';
+    switchView(false);
+}
+
+function switchView(isInRoom) {
+    if (isInRoom) {
+        document.getElementById('inRoom').style.display = 'block';
+        document.getElementById('notInRoom').style.display = 'none';
+    } else {
+        document.getElementById('inRoom').style.display = 'none';
+        document.getElementById('notInRoom').style.display = 'block';
+    }
+}
+
+</script>
+</body>
+
+</html>
