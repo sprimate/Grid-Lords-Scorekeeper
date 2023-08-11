@@ -17,6 +17,7 @@ io.on('connection', (socket) => {
     console.log('A user connected');
 
     socket.on('create-room', () => {
+        console.log("create-room");
         let roomKey = generateRoomKey();
         rooms[roomKey] = {
             players: {}
@@ -47,6 +48,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join-room', (roomKey) => {
+                console.log("join-room", roomKey);
+
         if (rooms[roomKey]) {
             socket.join(roomKey);
             //rooms[roomKey].players[socket.id] = {Glory: 0, Tokens: 0};
@@ -57,6 +60,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('update-data', ({ roomKey, value, playerId, elementName }) => {
+        console.log("update-data", roomKey, value, playerId, elementName);
         if (rooms[roomKey]) {
             rooms[roomKey].players[playerId][elementName] += value;
             io.to(roomKey).emit('data-updated', {playerId: playerId, elementName: elementName, value: rooms[roomKey].players[playerId][elementName]});
