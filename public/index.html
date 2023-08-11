@@ -140,6 +140,7 @@ socket.on('players-modified', data => {
 
 function createPlayer()
 {
+    console.log("createPlayer");
     var name = document.getElementById("playerName").value;
     if (!name)
     {
@@ -159,6 +160,7 @@ function createPlayer()
 
 function UpdateScore(data)
 {
+    console.log("updateScore", data);
     var playerDataDiv = document.getElementById('playerData');
     playerDataDiv.innerHTML = '';
 
@@ -187,6 +189,7 @@ function UpdateScore(data)
 
 function removePlayer(playerToRemove)
 {
+    console.log("removePlayer", playerToRemove);
     if (confirm("Are you sure you want to remove player " + playerToRemove + "?"))
     {
         socket.emit('remove-player', { roomKey: currentRoomKey, playerName: playerToRemove });
@@ -198,6 +201,7 @@ socket.on('room-not-found', () => {
 });
 
 socket.on('data-updated', (data) => {
+    console.log("data-updated", data);
     document.getElementById(data.playerId + "-" + data.elementName).innerText = data.value;
 });
 
@@ -207,10 +211,13 @@ socket.on('room-disbanded', () => {
 });
 
 function createRoom() {
+    console.log("create-room");
     socket.emit('create-room');
 }
 
 function joinRoom() {
+        console.log("joinRoom");
+
     const roomKey = document.getElementById('roomKey').value;
     if (roomKey) {
         socket.emit('join-room', roomKey);
@@ -218,18 +225,24 @@ function joinRoom() {
 }
 
 function updateData(value, playerId, elementName) {
+        console.log("updateData", value, playerId, elementName);
+
     if (currentRoomKey) {
         socket.emit('update-data', { roomKey: currentRoomKey, value, playerId, elementName });
     }
 }
 
 function leaveRoom() {
+            console.log("leaveRoom");
+
     currentRoomKey = null;
     document.getElementById('playerData').innerHTML = '';
     switchView(false);
 }
 
 function switchView(isInRoom) {
+                console.log("switchView", isInRoom);
+
     if (isInRoom) {
         document.getElementById('inRoom').style.display = 'block';
         document.getElementById('notInRoom').style.display = 'none';
