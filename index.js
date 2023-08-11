@@ -24,7 +24,7 @@ io.on('connection', (socket) => {
         };
         socket.join(roomKey);
         //rooms[roomKey].players[socket.id] = {Glory: 0, Tokens: 0};
-        socket.emit('room-joined', { roomKey, playerId: socket.id, data: rooms[roomKey] });
+        io.in(roomKey).emit('room-joined', { roomKey, playerId: socket.id, data: rooms[roomKey] });
 
         // Disband room after the set time
         setTimeout(() => {
@@ -38,24 +38,24 @@ io.on('connection', (socket) => {
     socket.on('create-player', ({roomKey, name}) => {
         console.log("Player creation requested for ", name);
         rooms[roomKey].players[name] = {Glory: 0, Tokens: 0};
-        io.to(roomKey).emit('players-modified', rooms[roomKey].players);
+        io.in(roomKey).emit('players-modified', rooms[roomKey].players);
     });
 
     socket.on('remove-player', ({roomKey, playerName}) => {
         console.log("Request to remove " + playerName + " from " + roomKey);
         delete rooms[roomKey].players[playerName];
-        io.to(roomKey).emit('players-modified', rooms[roomKey].players);
+        io.in(roomKey).emit('players-modified', rooms[roomKey].players);
     });
 
     socket.on('join-room', (roomKey) => {
-                console.log("join-room", roomKey);
+        console.log("join-room", roomKey);
 
         if (rooms[roomKey]) {
             socket.join(roomKey);
             //rooms[roomKey].players[socket.id] = {Glory: 0, Tokens: 0};
-            socket.emit('room-joined', { roomKey, playerId: socket.id, data: rooms[roomKey] });
+            io.in(roomKey).emit('room-joined', { roomKey, playerId: socket.id, data: rooms[roomKey] });
         } else {
-            socket.emit('room-not-found');
+            io.in(roomKey).emit('room-not-found');
         }
     });
 
@@ -63,7 +63,7 @@ io.on('connection', (socket) => {
         console.log("update-data", roomKey, value, playerId, elementName);
         if (rooms[roomKey]) {
             rooms[roomKey].players[playerId][elementName] += value;
-            io.to(roomKey).emit('data-updated', {playerId: playerId, elementName: elementName, value: rooms[roomKey].players[playerId][elementName]});
+            io.in(roomKey).emit('data-updated', {playerId: playerId, elementName: elementName, value: rooms[roomKey].players[playerId][elementName]});
         }
     });
 
